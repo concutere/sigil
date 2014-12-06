@@ -50,6 +50,12 @@
   function clear() {
     ctx.clearRect(0,0,cvs.width, cvs.height);
   }
+  
+  function clearsvg() {
+    while(svg.lastChild) {
+      svg.removeChild(svg.lastChild);
+    }
+  }
 
   function setKeys(text,skipCtls) {
     document.removeEventListener('keypress',update);
@@ -62,6 +68,7 @@
     showpath=path;
     //setup edit els
     if(!skipCtls) {
+      clearsvg();
       drawCtls(path.commands);
     }
     
@@ -74,11 +81,11 @@
       switch(cmd.type) {
         case 'M':
         case 'L':
-          drawCtl(i,cmd.x, cmd.y);
+          drawCtl(i,cmd, cmd.x, cmd.y);
           break;
         case 'Q':
-          drawCtl(i,cmd.x, cmd.y, true);
-          drawCtl(i,cmd.x1, cmd.y1);
+          drawCtl(i,cmd, cmd.x, cmd.y);
+          drawCtl(i+.1, cmd, cmd.x1, cmd.y1);
           break;
         case 'Z': //close 
           break;
@@ -89,19 +96,36 @@
     }
   }
   
-  function drawCtl(id,x,y, isCtlPt) {
+  function drawCtl(id,cmd, x, y) {
+    var isCtlPt = parseFloat(id) != Math.floor(id);
+    var i = parseInt(Math.floor(id));
     var svgNS = "http://www.w3.org/2000/svg";
     var el = document.createElementNS(svgNS, "circle");
     el.id='ctl'+id;
     el.r.baseVal.value=2;
     el.cx.baseVal.value = x;
     el.cy.baseVal.value = y;
-    el.setAttribute('stroke',isCtlPt ? 'lightyellow' : 'steelblue');
+    el.setAttribute('stroke',isCtlPt ? 'lightyellow' : 'lightslategray');
     el.setAttribute('fill','transparent' );
     svg.appendChild(el);
     el.addEventListener('mousedown',mousedown);//TODO setup drag to update pt & path
     el.addEventListener('mouseup',mouseup);
+    el.addEventListener('dblclick',dblclick);
     return el;
+  }
+  
+  function dblclick(e) {
+    var id = e.target.id.substr(3);
+    if (!isNaN(id) && id > -1) {
+      var i = parseInt(Math.floor(id));
+      var cmd = showpath.commands[i];
+      showpath.commands.splice(i,1);
+
+      clear();
+      clearsvg();
+      showpath.draw(ctx);
+      drawCtls(showpath.commands);
+    }
   }
   
   //TODO encapsulate ...
@@ -132,11 +156,19 @@
   function mouseup(e) {
     document.removeEventListener('mousemove',mousemove);
     shiftPos(e.x,e.y,dragel);
+    var type = dragel.id.substr(0,1);
     var id=dragel.id.substr(3);
-    {dragel=undefined;}
-    showpath.commands[id].x += lastpos[0]-downpos[0];
-    showpath.commands[id].y += lastpos[1]-downpos[1];
-    
+
+    var i = parseInt(Math.floor(id));
+    if (parseFloat(id) != Math.floor(id)) {
+      showpath.commands[i].x1 = dragel.cx.baseVal.value;
+      showpath.commands[i].y1 = dragel.cy.baseVal.value;
+    }
+    else {
+      showpath.commands[i].x = dragel.cx.baseVal.value;
+      showpath.commands[i].y = dragel.cy.baseVal.value;
+    }
+    {dragel=undefined;}    
     clear();
     showpath.draw(ctx);
     
