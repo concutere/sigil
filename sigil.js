@@ -102,14 +102,21 @@
     var svgNS = "http://www.w3.org/2000/svg";
     var el = document.createElementNS(svgNS, "circle");
     el.id='ctl'+id;
-    el.r.baseVal.value=2;
+    el.r.baseVal.value=isCtlPt ? 1.5 : 2;
     el.cx.baseVal.value = x;
     el.cy.baseVal.value = y;
-    el.setAttribute('stroke',isCtlPt ? 'lightyellow' : 'lightslategray');
-    el.setAttribute('fill','transparent' );
+    el.setAttribute(isCtlPt ? 'stroke' : 'fill','azure');
+    if (isCtlPt) {
+      el.setAttribute('fill','transparent');
+      el.setAttribute('stroke-opacity', '0.5');
+    }
+    else {
+      el.setAttribute('fill-opacity', '0.5');
+    }
+
     svg.appendChild(el);
-    el.addEventListener('mousedown',mousedown);//TODO setup drag to update pt & path
-    el.addEventListener('mouseup',mouseup);
+    el.addEventListener('mousedown',mousedown);
+    el.addEventListener('mouseup',mouseup); //TODO handle like mousemove
     el.addEventListener('dblclick',dblclick);
     return el;
   }
