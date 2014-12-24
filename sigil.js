@@ -23,6 +23,18 @@
   var chars=[];
   var cPaths=[]; //TODO use for animating transition from user's statement text into set of letters
   var showpath;
+  document.addEventListener('keydown',handleCmd);
+  function handleCmd(e) {
+    if (e.which === 8) {
+      e.preventDefault();
+      //DELETE CHAR
+      chars.pop();
+      if (text.length > 1) text = text.substr(0,text.length-1);
+      drawTypedText();
+      return false;
+    }
+  }
+
   document.addEventListener('keypress',update);
   function update(e) {
     if (text=="") {
@@ -41,6 +53,10 @@
       cPaths.push(path);*/
     }
     text+=c;
+    drawTypedText();
+  }
+
+  function drawTypedText() {
     var path = gf.getPath(text,25,200,36);
     path.fill='crimson';
     clear();
@@ -102,7 +118,7 @@
     var svgNS = "http://www.w3.org/2000/svg";
     var el = document.createElementNS(svgNS, "circle");
     el.id='ctl'+id;
-    el.r.baseVal.value=isCtlPt ? 1.5 : 2;
+    el.r.baseVal.value=isCtlPt ? 3.5 : 4;
     el.cx.baseVal.value = x;
     el.cy.baseVal.value = y;
     el.setAttribute(isCtlPt ? 'stroke' : 'fill','azure');
