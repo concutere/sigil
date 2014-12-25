@@ -1,8 +1,10 @@
 (function() {//TODO encapsulate ...
   var svgNS = "http://www.w3.org/2000/svg";
   var gf; 
-  var cvs = document.getElementById('canvas');
-  var ctx = cvs.getContext('2d');
+  /* keeping these around in case canvas rendering becomes relevant again ...
+  var cvs;// = document.getElementById('canvas');
+  var ctx;// = cvs.getContext('2d'); //
+  */
   var svg = document.getElementById('svg');
   var gPath = document.getElementById('gPath');
   var gCtls = document.getElementById('gCtls');
@@ -19,7 +21,7 @@
           var path = font.getPath('TYPE HERE', 25, 150, 72);
           // If you just want to draw the text you can also use font.draw(ctx, text, x, y, fontSize).
           path.fill='CRIMSON';
-          path.draw(gPath);
+          path.drawSVG(gPath);
       }
   });
 
@@ -70,7 +72,7 @@
     var path = gf.getPath(text,25,200,36);
     path.fill='crimson';
     clearPath();
-    path.draw(gPath);
+    path.drawSVG(gPath);
   }
 
   function clear() {
@@ -97,7 +99,7 @@
     
     var path = gf.getPath(chars.join(''),25,100,88);
     path.fill='crimson';
-    path.draw(gPath);
+    path.drawSVG(gPath);
     showpath=path;
     //setup edit els
     if(!skipCtls) {
@@ -183,7 +185,7 @@
 
       clearPath();
       clearCtls();
-      showpath.draw(gPath);
+      showpath.drawSVG(gPath);
       drawCtls(showpath.commands);
     }
   }
@@ -230,7 +232,7 @@
     }
     {dragel=undefined;}    
     clearPath();
-    showpath.draw(gPath);
+    showpath.drawSVG(gPath);
     
   }
 })();

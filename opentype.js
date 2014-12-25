@@ -430,6 +430,19 @@ Font.prototype.draw = function (ctx, text, x, y, fontSize, options) {
     this.getPath(text, x, y, fontSize, options).draw(ctx);
 };
 
+// Draw the text on the given SVG container element.
+//
+// parent - SVG container element (<SVG> or <G>) to add path to. 
+// text - The text to create.
+// x - Horizontal position of the beginning of the text. (default: 0)
+// y - Vertical position of the *baseline* of the text. (default: 0)
+// fontSize - Font size in pixels. We scale the glyph units by `1 / unitsPerEm * fontSize`. (default: 72)
+// Options is an optional object that contains:
+// - kerning - Whether to take kerning information into account. (default: true)
+Font.prototype.drawSVG = function (parent, text, x, y, fontSize, options) {
+    this.getPath(text, x, y, fontSize, options).drawSVG(parent);
+};
+
 // Draw the points of all glyphs in the text.
 // On-curve points will be drawn in blue, off-curve points will be drawn in red.
 //
@@ -443,6 +456,22 @@ Font.prototype.draw = function (ctx, text, x, y, fontSize, options) {
 Font.prototype.drawPoints = function (ctx, text, x, y, fontSize, options) {
     this.forEachGlyph(text, x, y, fontSize, options, function (glyph, x, y, fontSize) {
         glyph.drawPoints(ctx, x, y, fontSize);
+    });
+};
+
+// Draw the points of all glyphs in the text.
+// On-curve points will be drawn in blue, off-curve points will be drawn in red.
+//
+// parent - SVG container element.
+// text - The text to create.
+// x - Horizontal position of the beginning of the text. (default: 0)
+// y - Vertical position of the *baseline* of the text. (default: 0)
+// fontSize - Font size in pixels. We scale the glyph units by `1 / unitsPerEm * fontSize`. (default: 72)
+// Options is an optional object that contains:
+// - kerning - Whether to take kerning information into account. (default: true)
+Font.prototype.drawPointsSVG = function (parent, text, x, y, fontSize, options) {
+    this.forEachGlyph(text, x, y, fontSize, options, function (glyph, x, y, fontSize) {
+        glyph.drawPointsSVG(parent, x, y, fontSize);
     });
 };
 
@@ -461,6 +490,24 @@ Font.prototype.drawPoints = function (ctx, text, x, y, fontSize, options) {
 Font.prototype.drawMetrics = function (ctx, text, x, y, fontSize, options) {
     this.forEachGlyph(text, x, y, fontSize, options, function (glyph, x, y, fontSize) {
         glyph.drawMetrics(ctx, x, y, fontSize);
+    });
+};
+
+// Draw lines indicating important font measurements for all glyphs in the text.
+// Black lines indicate the origin of the coordinate system (point 0,0).
+// Blue lines indicate the glyph bounding box.
+// Green line indicates the advance width of the glyph.
+//
+// parent - SVG container element.
+// text - The text to create.
+// x - Horizontal position of the beginning of the text. (default: 0)
+// y - Vertical position of the *baseline* of the text. (default: 0)
+// fontSize - Font size in pixels. We scale the glyph units by `1 / unitsPerEm * fontSize`. (default: 72)
+// Options is an optional object that contains:
+// - kerning - Whether to take kerning information into account. (default: true)
+Font.prototype.drawMetricsSVG = function (parent, text, x, y, fontSize, options) {
+    this.forEachGlyph(text, x, y, fontSize, options, function (glyph, x, y, fontSize) {
+        glyph.drawMetricsSVG(parent, x, y, fontSize);
     });
 };
 
@@ -664,6 +711,16 @@ Glyph.prototype.draw = function (ctx, x, y, fontSize) {
     this.getPath(x, y, fontSize).draw(ctx);
 };
 
+// Draw the glyph on the given SVG container element.
+//
+// parent - SVG container element to add path to
+// x - Horizontal position of the glyph. (default: 0)
+// y - Vertical position of the *baseline* of the glyph. (default: 0)
+// fontSize - Font size, in pixels (default: 72).
+Glyph.prototype.draw = function (parent, x, y, fontSize) {
+    this.getPath(x, y, fontSize).drawSVG(parent);
+};
+
 // Draw the points of the glyph.
 // On-curve points will be drawn in blue, off-curve points will be drawn in red.
 //
@@ -712,6 +769,58 @@ Glyph.prototype.drawPoints = function (ctx, x, y, fontSize) {
     drawCircles(redCircles, x, y, scale);
 };
 
+// Draw the points of the glyph.
+// On-curve points will be drawn in blue, off-curve points will be drawn in red.
+//
+// parent - SVG container element.
+// x - Horizontal position of the glyph. (default: 0)
+// y - Vertical position of the *baseline* of the glyph. (default: 0)
+// fontSize - Font size, in pixels (default: 72).
+Glyph.prototype.drawPointsSVG = function (parent, x, y, fontSize) {
+
+    function drawCircles(l, x, y, scale, fill) {
+        var j, PI_SQ = Math.PI * 2;
+        var cel = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+        for (j = 0; j < l.length; j += 1) {
+            var cx = x + (l[j].x * scale);
+            var cy = y + (l[j].y * scale);
+            cel.setAttribute('cx',cx);
+            cel.setAttribute('cy',cy);
+            cel.setAttribute('r', 2);
+            if(color) {
+                cel.setAttribute('fill');
+            }
+            //ctx.arc(cx, cy, 2, 0, PI_SQ, false);
+            parent.appendChild(cel);
+        }
+    }
+
+    var scale, i, blueCircles, redCircles, path, cmd;
+    x = x !== undefined ? x : 0;
+    y = y !== undefined ? y : 0;
+    fontSize = fontSize !== undefined ? fontSize : 24;
+    scale = 1 / this.font.unitsPerEm * fontSize;
+
+    blueCircles = [];
+    redCircles = [];
+    path = this.path;
+    for (i = 0; i < path.commands.length; i += 1) {
+        cmd = path.commands[i];
+        if (cmd.x !== undefined) {
+            blueCircles.push({x: cmd.x, y: -cmd.y});
+        }
+        if (cmd.x1 !== undefined) {
+            redCircles.push({x: cmd.x1, y: -cmd.y1});
+        }
+        if (cmd.x2 !== undefined) {
+            redCircles.push({x: cmd.x2, y: -cmd.y2});
+        }
+    }
+
+    drawCircles(blueCircles, x, y, scale, 'blue');
+    drawCircles(redCircles, x, y, scale, 'red');
+};
+
 // Draw lines indicating important font measurements.
 // Black lines indicate the origin of the coordinate system (point 0,0).
 // Blue lines indicate the glyph bounding box.
@@ -741,6 +850,45 @@ Glyph.prototype.drawMetrics = function (ctx, x, y, fontSize) {
     // Draw the advance width
     ctx.strokeStyle = 'green';
     draw.line(ctx, x + (this.advanceWidth * scale), -10000, x + (this.advanceWidth * scale), 10000);
+};
+
+// Draw lines indicating important font measurements.
+// Black lines indicate the origin of the coordinate system (point 0,0).
+// Blue lines indicate the glyph bounding box.
+// Green line indicates the advance width of the glyph.
+//
+// parent - SVG container element.
+// x - Horizontal position of the glyph. (default: 0)
+// y - Vertical position of the *baseline* of the glyph. (default: 0)
+// fontSize - Font size, in pixels (default: 72).
+Glyph.prototype.drawMetricsSVG = function (parent, x, y, fontSize) {
+    function drawline (x1, y1, x2, y2, stroke) {
+        var lel = document.createElementNS("http://www.w3.org/2000/svg", 'line');
+        lel.setAttribute('x1',x1);
+        lel.setAttribute('y1',y1);
+        lel.setAttribute('x2',x2);
+        lel.setAttribute('y2',y2);
+        lel.setAttribute('stroke',stroke)
+    }
+
+    var scale;
+    x = x !== undefined ? x : 0;
+    y = y !== undefined ? y : 0;
+    fontSize = fontSize !== undefined ? fontSize : 24;
+    scale = 1 / this.font.unitsPerEm * fontSize;
+
+    // Draw the origin
+    drawline(x, -10000, x, 10000,'black');
+    drawline(ctx, -10000, y, 10000, y, 'black');
+
+    // Draw the glyph box
+    drawline(x + (this.xMin * scale), -10000, x + (this.xMin * scale), 10000, 'blue');
+    drawline(x + (this.xMax * scale), -10000, x + (this.xMax * scale), 10000, 'blue');
+    drawline(-10000, y + (-this.yMin * scale), 10000, y + (-this.yMin * scale), 'blue');
+    drawline(-10000, y + (-this.yMax * scale), 10000, y + (-this.yMax * scale), 'blue');
+
+    // Draw the advance width
+    drawline(x + (this.advanceWidth * scale), -10000, x + (this.advanceWidth * scale), 10000, 'green');
 };
 
 exports.Glyph = Glyph;
@@ -1237,6 +1385,44 @@ Path.prototype.extend = function (pathOrCommands) {
 
 // Draw the path to a 2D context.
 Path.prototype.draw = function (ctx) {
+    var i, cmd;
+    /***
+        use the following to autoselect drawSVG based on ctx type
+        
+    if (ctx.constructor.name=="SVGSVGElement" || ctx.constructor.name=="SVGGElement") {
+        console.log('Path.draw redirecting to drawSVG based on ctx type (' + ctx.constructor.name + ')');
+        this.drawSVG(ctx)
+    }
+    else {
+        ...
+    ***/
+    ctx.beginPath();
+    for (i = 0; i < this.commands.length; i += 1) {
+        cmd = this.commands[i];
+        if (cmd.type === 'M') {
+            ctx.moveTo(cmd.x, cmd.y);
+        } else if (cmd.type === 'L') {
+            ctx.lineTo(cmd.x, cmd.y);
+        } else if (cmd.type === 'C') {
+            ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
+        } else if (cmd.type === 'Q') {
+            ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y);
+        } else if (cmd.type === 'Z') {
+            ctx.closePath();
+        }
+    }
+    if (this.fill) {
+        ctx.fillStyle = this.fill;
+        ctx.fill();
+    }
+    if (this.stroke) {
+        ctx.strokeStyle = this.stroke;
+        ctx.lineWidth = this.strokeWidth;
+        ctx.stroke();
+    }
+};
+
+Path.prototype.drawSVG = function drawSVG(parent) {
             function fixd(v) {
                 if (Math.round(v) === v) {
                     return Math.round(v);
@@ -1244,77 +1430,48 @@ Path.prototype.draw = function (ctx) {
                     return v.toFixed(2);
                 }
             }
+
     var i, cmd;
-    if (ctx.constructor.name=="SVGSVGElement" || ctx.constructor.name=="SVGGElement") {
-        var svg = ctx;
-        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        svg.appendChild(path);
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    parent.appendChild(path);
 
-        var useSegList =  true; //to debug, set false (will use getPathData to set path d string)
-        if (useSegList) {
-            var sl = path.pathSegList;
-            // sl.clear(); //new path, totally unnecessary!
+    var useSegList =  true; //to debug, set false (will use toPathData to set path d string)
+    if (useSegList) {
+        var sl = path.pathSegList;
+        // sl.clear(); //new path, totally unnecessary!
 
 
-            for (i = 0; i < this.commands.length; i += 1) {
-                cmd = this.commands[i];
-                var seg;
-                console.log('boo');
-                if (cmd.type === 'M') {
-                    seg = path.createSVGPathSegMovetoAbs(fixd(cmd.x),fixd(cmd.y));
-                } else if (cmd.type === 'L') {
-                    seg = path.createSVGPathSegLinetoAbs(fixd(cmd.x),fixd(cmd.y));
-                } else if (cmd.type === 'C') {
-                    seg = path.createSVGPathSegCurvetoCubicAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1), fixd(cmd.x2), fixd(cmd.y2));
-                } else if (cmd.type === 'Q') {
-                    seg = path.createSVGPathSegCurvetoQuadraticAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1));
-                } else if (cmd.type === 'Z') {
-                    seg = path.createSVGPathSegClosePath();
-                }
-                if(seg) {
-                    sl.appendItem(seg);
-                }
+        for (i = 0; i < this.commands.length; i += 1) {
+            cmd = this.commands[i];
+            var seg;
+            if (cmd.type === 'M') {
+                seg = path.createSVGPathSegMovetoAbs(fixd(cmd.x),fixd(cmd.y));
+            } else if (cmd.type === 'L') {
+                seg = path.createSVGPathSegLinetoAbs(fixd(cmd.x),fixd(cmd.y));
+            } else if (cmd.type === 'C') {
+                seg = path.createSVGPathSegCurvetoCubicAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1), fixd(cmd.x2), fixd(cmd.y2));
+            } else if (cmd.type === 'Q') {
+                seg = path.createSVGPathSegCurvetoQuadraticAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1));
+            } else if (cmd.type === 'Z') {
+                seg = path.createSVGPathSegClosePath();
             }
-        }
-        else {
-            path.setAttribute('d',this.toPathData()); //TODO build out seg list to avoid string proc slowdown
-        }
-
-        if (this.fill) {
-            path.setAttribute('fill',this.fill);
-        }
-        if(this.stroke) {
-            path.setAttribute('stroke',this.stroke);
-            path.setAttribute('strokeWidth',this.strokeWidth);
+            if(seg) {
+                sl.appendItem(seg);
+            }
         }
     }
     else {
-        ctx.beginPath();
-        for (i = 0; i < this.commands.length; i += 1) {
-            cmd = this.commands[i];
-            if (cmd.type === 'M') {
-                ctx.moveTo(cmd.x, cmd.y);
-            } else if (cmd.type === 'L') {
-                ctx.lineTo(cmd.x, cmd.y);
-            } else if (cmd.type === 'C') {
-                ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
-            } else if (cmd.type === 'Q') {
-                ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y);
-            } else if (cmd.type === 'Z') {
-                ctx.closePath();
-            }
-        }
-        if (this.fill) {
-            ctx.fillStyle = this.fill;
-            ctx.fill();
-        }
-        if (this.stroke) {
-            ctx.strokeStyle = this.stroke;
-            ctx.lineWidth = this.strokeWidth;
-            ctx.stroke();
-        }
+        path.setAttribute('d',this.toPathData()); //TODO build out seg list to avoid string proc slowdown
     }
-};
+
+    if (this.fill) {
+        path.setAttribute('fill',this.fill);
+    }
+    if(this.stroke) {
+        path.setAttribute('stroke',this.stroke);
+        path.setAttribute('strokeWidth',this.strokeWidth);
+    }
+}
 
 // Convert the Path to a string of path data instructions
 // See http://www.w3.org/TR/SVG/paths.html#PathData
