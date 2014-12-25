@@ -12,7 +12,11 @@
 
   <body>
     <!--canvas id=canvas width="600" height="400" style="position:absolute;width:600px;height:400px;background-color:black;padding:0px;margin:10px"></canvas-->
-    <svg id=svg style="background-color:black;"><rect id="selection" class="hide"></rect> <g id="gPath"></g><g id="gCtls"></g></svg>
+    <svg id=svg style="background-color:black;">
+    	<g id="gPath"></g>
+    	<g id="gCtls"></g>
+    	<rect id="selection" class="hide" style="stroke:#fc6;fill:#fc6;fill-opacity:.5;"></rect>
+    </svg>
   </body>
     <script src="sigil.js"></script>
 </html>
