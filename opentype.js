@@ -440,7 +440,7 @@ Font.prototype.draw = function (ctx, text, x, y, fontSize, options) {
 // Options is an optional object that contains:
 // - kerning - Whether to take kerning information into account. (default: true)
 Font.prototype.drawSVG = function (parent, text, x, y, fontSize, options) {
-    this.getPath(text, x, y, fontSize, options).drawSVG(parent);
+    return this.getPath(text, x, y, fontSize, options).drawSVG(parent);
 };
 
 // Draw the points of all glyphs in the text.
@@ -717,8 +717,8 @@ Glyph.prototype.draw = function (ctx, x, y, fontSize) {
 // x - Horizontal position of the glyph. (default: 0)
 // y - Vertical position of the *baseline* of the glyph. (default: 0)
 // fontSize - Font size, in pixels (default: 72).
-Glyph.prototype.draw = function (parent, x, y, fontSize) {
-    this.getPath(x, y, fontSize).drawSVG(parent);
+Glyph.prototype.drawSVG = function (parent, x, y, fontSize) {
+    return this.getPath(x, y, fontSize).drawSVG(parent);
 };
 
 // Draw the points of the glyph.
@@ -1471,6 +1471,8 @@ Path.prototype.drawSVG = function drawSVG(parent) {
         path.setAttribute('stroke',this.stroke);
         path.setAttribute('strokeWidth',this.strokeWidth);
     }
+
+    return path;
 }
 
 // Convert the Path to a string of path data instructions
