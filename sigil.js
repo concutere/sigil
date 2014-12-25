@@ -8,6 +8,9 @@
   var svg = document.getElementById('svg');
   var gPath = document.getElementById('gPath');
   var gCtls = document.getElementById('gCtls');
+  var h = 0;
+  var w = 0;
+  var fontSize = 72;
 
   opentype.load('fonts/Roboto-Black.ttf', function (err, font) {
       if (err) {
@@ -18,9 +21,13 @@
           // Construct a Path object containing the letter shapes of the given text.
           // The other parameters are x, y and fontSize.
           // Note that y is the position of the baseline.
-          var path = font.getPath('TYPE HERE', 25, 150, 72);
+
+          // is this too late to be pulling these? (dont think so but not 100%)
+          h = svg.height.baseVal.value;
+          w = svg.width.baseVal.value;
+          var path = font.getPath('TYPE HERE', 25, h/2 + fontSize/2, fontSize);
           // If you just want to draw the text you can also use font.draw(ctx, text, x, y, fontSize).
-          path.fill='CRIMSON';
+          path.fill='crimson';
           path.drawSVG(gPath);
       }
   });
@@ -69,7 +76,7 @@
   }
 
   function drawTypedText() {
-    var path = gf.getPath(text,25,200,36);
+    var path = gf.getPath(text,25,h/2 + fontSize/4,fontSize/2);
     path.fill='crimson';
     clearPath();
     path.drawSVG(gPath);
@@ -97,9 +104,20 @@
     
     clearPath();
     
-    var path = gf.getPath(chars.join(''),25,100,88);
+    var ffsize = fontSize * 1.2;
+    var path = gf.getPath(chars.join(''),25,h/2 + ffsize/2,ffsize);
     path.fill='crimson';
-    path.drawSVG(gPath);
+    var pel = path.drawSVG(gPath);
+    var bb = pel.getBBox();
+    var pw = bb.width;
+
+    var tran=svg.createSVGTransform();
+    tran.setTranslate(w/2 - (pw + bb.x)/2, 0);
+    gPath.transform.baseVal.appendItem(tran);
+    var tran=svg.createSVGTransform();
+    tran.setTranslate(w/2 - (pw + bb.x)/2, 0);
+    gCtls.transform.baseVal.appendItem(tran);
+
     showpath=path;
     //setup edit els
     if(!skipCtls) {
@@ -110,6 +128,9 @@
     gPath.addEventListener('dblclick',editPathColor);
 
     svg.addEventListener('dblclick',function(e) {if(e.target.constructor.name=="SVGSVGElement") { showCtls = !showCtls; reshowCtls(); }});
+    svg.addEventListener('mousedown',dragFrom);
+    document.addEventListener('mousemove',dragOver);
+    svg.addEventListener('mouseup',dragTo);
   }
 
   function editPathColor(e) {
@@ -202,6 +223,7 @@
   
   function mousemove(e) {
     shiftPos(e.x,e.y,dragel);
+    //TODO live-update change to seg (need to find the right seg, should be able to use ctl#)
   }
   
   function shiftPos(x,y,target) {
@@ -218,7 +240,7 @@
   function mouseup(e) {
     document.removeEventListener('mousemove',mousemove);
     shiftPos(e.x,e.y,dragel);
-    var type = dragel.id.substr(0,1);
+    //var type = dragel.id.substr(0,1);
     var id=dragel.id.substr(3);
 
     var i = parseInt(Math.floor(id));
@@ -233,6 +255,19 @@
     {dragel=undefined;}    
     clearPath();
     showpath.drawSVG(gPath);
-    
+  }
+
+  ////////////////////////////////
+
+  function dragFrom(e) {
+
+  }
+
+  function dragOver(e) {
+
+  }
+
+  function dragTo(e) {
+
   }
 })();
