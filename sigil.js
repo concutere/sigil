@@ -48,9 +48,13 @@
       drawTypedText();
       return false;
     }
-    if (e.keyCode === 27) {
+    else if (e.keyCode === 27) {
       showCtls = !showCtls;
       reshowCtls();
+    }
+    else if (e.keyCode === 46) {
+      if(selIds.length > 0)
+      delSel();
     }
   }
 
@@ -99,6 +103,7 @@
     }
   }
 
+  var tranx = 0;
   function setKeys(text,skipCtls) {
     document.removeEventListener('keypress',update);
     
@@ -111,11 +116,12 @@
     var bb = pel.getBBox();
     var pw = bb.width;
 
+    tranx = w/2 - (pw + bb.x)/2;
     var tran=svg.createSVGTransform();
-    tran.setTranslate(w/2 - (pw + bb.x)/2, 0);
+    tran.setTranslate(tranx, 0);
     gPath.transform.baseVal.appendItem(tran);
     var tran=svg.createSVGTransform();
-    tran.setTranslate(w/2 - (pw + bb.x)/2, 0);
+    tran.setTranslate(tranx, 0);
     gCtls.transform.baseVal.appendItem(tran);
 
     showpath=path;
@@ -129,7 +135,6 @@
 
     svg.addEventListener('dblclick',function(e) {if(e.target.constructor.name=="SVGSVGElement") { showCtls = !showCtls; reshowCtls(); }});
     svg.addEventListener('mousedown',dragFrom);
-    document.addEventListener('mousemove',dragOver);
     svg.addEventListener('mouseup',dragTo);
   }
 
@@ -152,6 +157,7 @@
   }
 
   function drawCtls(cmds) {
+    //console.log('drawCtls # ' + cmds.length)
     for (var i = 0; i < cmds.length; i++) {
       var cmd = cmds[i];
       switch(cmd.type) {
@@ -192,22 +198,42 @@
 
     gCtls.appendChild(el);
     el.addEventListener('mousedown',mousedown);
-    el.addEventListener('mouseup',mouseup); //TODO handle like mousemove (?)
+    el.addEventListener('mouseup',mouseup); 
     el.addEventListener('dblclick',delEl);
     return el;
   }
   
-  function delEl(e) {
-    var id = e.target.id.substr(3);
-    if (!isNaN(id) && id > -1) {
-      var i = parseInt(Math.floor(id));
-      var cmd = showpath.commands[i];
-      showpath.commands.splice(i,1);
-
+  function delSel() {
+    //console.log('delSel')
+    for (var i = 0; i < selCtls.length; i++) {
+      var cmd = selCtls[i].cmd;
+      var cid = showpath.commands.indexOf(cmd);
+      if (cid > -1) {
+        showpath.commands.splice(cid,1);
+      }
+      selCtls[i].el.parentElement.removeChild(selCtls[i].el);
+    }
       clearPath();
       clearCtls();
       showpath.drawSVG(gPath);
       drawCtls(showpath.commands);
+  }
+  function delEl(e) {
+    var id = e.target.id.substr(3);
+    if (!isNaN(id) && id > -1) {
+      if(isSelId(id)) {
+        delSel();
+      }
+      else {
+        var i = parseInt(Math.floor(id));
+        var cmd = showpath.commands[i];
+        showpath.commands.splice(i,1);
+      clearPath();
+      clearCtls();
+      showpath.drawSVG(gPath);
+      drawCtls(showpath.commands);
+      }
+
     }
   }
   
@@ -216,12 +242,18 @@
   var lastpos=[0,0];
   var dragel=undefined;
   function mousedown(e) {
+    //console.log('mousedown')
+    e.stopPropagation();
     lastpos=downpos=[e.x,e.y];
+    document.removeEventListener('mousemove',dragOver);
     document.addEventListener('mousemove',mousemove);
     dragel=e.target;
+    return false;
   }
   
   function mousemove(e) {
+    //console.log('mousemove')
+    if (!dragel) return;
     shiftPos(e.x,e.y,dragel);
     //TODO live-update change to seg (need to find the right seg, should be able to use ctl#)
   }
@@ -231,43 +263,184 @@
       console.log('wtf');
       return;
     }
-    var newpos=[x,y];
-    target.cx.baseVal.value += newpos[0]-lastpos[0];
-    target.cy.baseVal.value += newpos[1]-lastpos[1];
-    lastpos=newpos;
+    else {
+      var newpos=[x,y];
+      var diff=[newpos[0]-lastpos[0], newpos[1]-lastpos[1]];
+      lastpos=newpos;     
+      var cid = target.id.substr(3);
+      //console.log ('shiftPos cid='+cid +' - ' + selIds.join(','))
+      if (isSelId(cid)) {
+        //console.log('cid in selIds')
+        var done = [];
+        for (var i = 0; i < selCtls.length; i++) {
+          if (selCtls[i].cmd in done) continue;
+          var ctl = selCtls[i].el;
+          ctl.cx.baseVal.value += diff[0];
+          ctl.cy.baseVal.value += diff[1];
+          /*if(selCtls[i].cmd.x1) {
+            selCtls[i].cmd.x1 += diff[0];
+            selCtls[i].cmd.y1 += diff[1];
+          }
+          selCtls[i].cmd.x += diff[0];
+          selCtls[i].cmd.y += diff[1];*/
+          done.push(selCtls[i].cmd);
+        }
+      }
+      else {
+        target.cx.baseVal.value += diff[0];
+        target.cy.baseVal.value += diff[1];        
+      }
+    }
   }
   
   function mouseup(e) {
+    //console.log('mouseup')
+    if (!dragel) return;
     document.removeEventListener('mousemove',mousemove);
     shiftPos(e.x,e.y,dragel);
     //var type = dragel.id.substr(0,1);
     var id=dragel.id.substr(3);
 
-    var i = parseInt(Math.floor(id));
-    if (parseFloat(id) != Math.floor(id)) {
-      showpath.commands[i].x1 = dragel.cx.baseVal.value;
-      showpath.commands[i].y1 = dragel.cy.baseVal.value;
+    if (isSelId(id)) {
+      for (var i = 0; i < selCtls.length; i++) {
+        var use1=selCtls[i].el.id.indexOf('.1') > 0;
+        selCtls[i].el.setAttribute(use1 ? 'stroke' : 'fill', 'azure');
+        if (use1) {
+          selCtls[i].cmd.x1 = selCtls[i].el.cx.baseVal.value;
+          selCtls[i].cmd.y1 = selCtls[i].el.cy.baseVal.value;
+        }
+        else {
+          selCtls[i].cmd.x = selCtls[i].el.cx.baseVal.value;
+          selCtls[i].cmd.y = selCtls[i].el.cy.baseVal.value;
+        }
+      }
     }
     else {
-      showpath.commands[i].x = dragel.cx.baseVal.value;
-      showpath.commands[i].y = dragel.cy.baseVal.value;
+      var ii = parseInt(Math.floor(id));
+      if (parseFloat(id) != Math.floor(id)) {
+        showpath.commands[ii].x1 = dragel.cx.baseVal.value;
+        showpath.commands[ii].y1 = dragel.cy.baseVal.value;
+      }
+      else {
+        showpath.commands[ii].x = dragel.cx.baseVal.value;
+        showpath.commands[ii].y = dragel.cy.baseVal.value;
+      }
     }
-    {dragel=undefined;}    
+    selCtls=[];
+    selIds=[];
+
+    dragel=undefined;   
     clearPath();
     showpath.drawSVG(gPath);
   }
 
   ////////////////////////////////
 
+  var seldragging = false;
+  var dfpos;
+  var rel = document.getElementById('selection');
   function dragFrom(e) {
 
+    if(seldragging || (e.target && e.target.tagName && !(e.target.tagName == 'svg' || e.target.tagName == 'g'))) return;
+    //console.log('dragFrom')
+
+    seldragging = true;  
+    dfpos = {x: e.x, y: e.y};
+    rel.setAttribute('class','show');
+    updateSel(e);
+    document.removeEventListener('mousemove',mousemove); //necessary?
+    document.addEventListener('mousemove',dragOver); 
+      //console.log('dragFrom2')
+      return false;
   }
 
   function dragOver(e) {
-
+    //console.log('dragOver');
+    if(!seldragging) {
+      return;
+    }
+    updateSel(e);
   }
 
   function dragTo(e) {
+    //console.log('dragTo')
+    if (!seldragging) return;
 
+    document.removeEventListener('mousemove',dragOver);
+    // updateSel(e); //why? hiding it next step ... (debugging .........)
+    rel.setAttribute('class','hide')
+
+    updateSelCtls(e);
+
+    dfpos = undefined;
+    seldragging = false;
+  }
+
+  var setCtls=[];
+  var selIds=[];
+  function updateSelCtls(e) {
+    if (!dfpos) return;
+    var x = dfpos.x > e.x ? e.x : dfpos.x;
+    var y = dfpos.y > e.y ? e.y : dfpos.y;
+    var w = Math.abs(e.x - dfpos.x);
+    var h = Math.abs(e.y - dfpos.y);
+    var x2 = x + w;
+    var y2 = y + h;
+
+    selCtls=[];
+    selIds=[];
+    for (var i =0; i < showpath.commands.length; i++) {
+      var cmd = showpath.commands[i];
+      if(cmd.x + tranx > x && cmd.x + tranx < x2 && cmd.y > y && cmd.y < y2) {
+        var el = document.getElementById('ctl'+i);
+        if (el) {
+          el.setAttribute('fill','limegreen');
+          selCtls.push({x:cmd.x, y:cmd.y, el:el, cmd:cmd});
+          selIds.push(i);
+        }
+      }
+      if(!isNaN(cmd.x1) && !isNaN(cmd.y1) && cmd.x1 + tranx > x && cmd.x1 + tranx < x2 && cmd.y1 > y && cmd.y1 < y2) {
+        var el = document.getElementById('ctl'+i+'.1');
+        if (el) {
+          el.setAttribute('stroke','limegreen');
+          selCtls.push({x:cmd.x1, y:cmd.y1, el:el, cmd:cmd});
+          selIds.push(i+'.1');
+        }
+      }
+    }
+
+  }
+
+  function updateSel(e) {
+    //console.log('updateSel')
+    if (!dfpos) return;
+
+    var x = dfpos.x > e.x ? e.x : dfpos.x;
+    var y = dfpos.y > e.y ? e.y : dfpos.y;
+    var w = Math.abs(e.x - dfpos.x);
+    var h = Math.abs(e.y - dfpos.y);
+
+//console.log(x+','+y+','+w+','+h)
+    //draw
+    rel.setAttribute('x',x);
+    rel.setAttribute('y',y);
+    rel.setAttribute('width',w);
+    rel.setAttribute('height',h);
+
+  }
+
+  function isSelId(cid) {
+    //love that weak typing ...
+    var found = false;
+    var pos=-1;
+    for (var i=0; i<selIds.length;i++) {
+      if(selIds[i].toString() == cid.toString()) {
+        found=true;
+        pos = i;
+        break;
+      }
+    }
+    //console.log('isSelId? '+ found + '\t' + pos + '\t' + cid + '\t' + selIds)
+    return found;
   }
 })();
