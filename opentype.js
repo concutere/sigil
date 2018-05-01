@@ -1435,34 +1435,7 @@ Path.prototype.drawSVG = function drawSVG(parent) {
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     parent.appendChild(path);
 
-    var useSegList =  true; //to debug, set false (will use toPathData to set path d string)
-    if (useSegList) {
-        var sl = path.pathSegList;
-        // sl.clear(); //new path, totally unnecessary!
-
-
-        for (i = 0; i < this.commands.length; i += 1) {
-            cmd = this.commands[i];
-            var seg;
-            if (cmd.type === 'M') {
-                seg = path.createSVGPathSegMovetoAbs(fixd(cmd.x),fixd(cmd.y));
-            } else if (cmd.type === 'L') {
-                seg = path.createSVGPathSegLinetoAbs(fixd(cmd.x),fixd(cmd.y));
-            } else if (cmd.type === 'C') {
-                seg = path.createSVGPathSegCurvetoCubicAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1), fixd(cmd.x2), fixd(cmd.y2));
-            } else if (cmd.type === 'Q') {
-                seg = path.createSVGPathSegCurvetoQuadraticAbs(fixd(cmd.x), fixd(cmd.y), fixd(cmd.x1), fixd(cmd.y1));
-            } else if (cmd.type === 'Z') {
-                seg = path.createSVGPathSegClosePath();
-            }
-            if(seg) {
-                sl.appendItem(seg);
-            }
-        }
-    }
-    else {
-        path.setAttribute('d',this.toPathData()); //TODO build out seg list to avoid string proc slowdown
-    }
+    path.setAttribute('d',this.toPathData()); //TODO build out seg list to avoid string proc slowdown
 
     if (this.fill) {
         path.setAttribute('fill',this.fill);
